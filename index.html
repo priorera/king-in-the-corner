@@ -74,16 +74,30 @@
     let myTurn = false;
     let selectedHandIdx = null, selectedPileId = null;
 
+    // Explicitly define Google's public STUN servers to punch through strict network firewalls
+    const peerConfig = {
+        config: {
+            'iceServers': [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                { urls: 'stun:stun3.l.google.com:19302' }
+            ]
+        }
+    };
+
     document.getElementById('createBtn').onclick = () => {
         const id = document.getElementById('gameName').value.trim();
-        peer = new Peer(id);
+        // Pass the STUN configuration when creating the host peer
+        peer = new Peer(id, peerConfig);
         peer.on('open', () => document.getElementById('status').innerText = "Host Ready! Waiting for P2...");
         peer.on('connection', (c) => { conn = c; conn.on('data', handleData); conn.on('data', (d) => { if (d === 'ready') startHostGame(); }); });
     };
 
     document.getElementById('joinBtn').onclick = () => {
         const id = document.getElementById('gameName').value.trim();
-        peer = new Peer();
+        // Pass the STUN configuration when joining as the second peer
+        peer = new Peer(peerConfig);
         peer.on('open', () => {
             document.getElementById('status').innerText = "Connecting...";
             conn = peer.connect(id);
