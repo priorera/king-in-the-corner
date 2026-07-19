@@ -108,6 +108,15 @@
         /* Colors */
         .text-red-card { color: #dc2626 !important; }
         .text-black-card { color: #0f172a !important; }
+
+        /* Hand container - show all cards without scrolling */
+        #hand-container {
+            overflow-x: visible !important;
+            overflow-y: hidden !important;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            justify-content: flex-start;
+        }
     </style>
 </head>
 <body class="flex flex-col text-slate-100">
@@ -115,7 +124,7 @@
     <!-- Setup Screen -->
     <div id="setup" class="max-w-md mx-auto w-full p-6 mt-10 glass-panel rounded-2xl shadow-2xl">
         <h1 class="text-3xl font-extrabold mb-6 text-center text-white drop-shadow-md">King in the Corner</h1>
-        <input id="gameName" placeholder="Game ID (e.g. 1234)" class="bg-white/90 text-gray-900 border-0 p-4 rounded-xl w-full mb-4 text-center font-bold tracking-widest uppercase focus:ring-4 focus:ring-emerald-500 outline-none transition">
+        <input id="gameName" placeholder="Game ID (e.g. 1234)" class="bg-white/90 text-gray-900 border-0 p-4 rounded-xl w-full mb-4 text-center font-bold tracking-widest uppercase focus:ring-4 focus:ring-emerald-400 outline-none" />
         <div class="flex gap-3">
             <button id="createBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-4 rounded-xl flex-1 transition shadow-lg">Create</button>
             <button id="joinBtn" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-4 rounded-xl flex-1 transition shadow-lg">Join</button>
@@ -132,35 +141,39 @@
             <button id="passBtn" class="bg-amber-500 text-amber-950 font-bold px-4 py-2 rounded-lg shadow transition opacity-50 cursor-not-allowed text-xs sm:text-base">Pass Turn</button>
         </div>
 
-        <!-- Dynamic Board Container (Shrinks to fit remaining vertical space) -->
-        <div class="flex-1 min-h-0 flex items-center justify-center py-2">
-            <!-- Grid aspect ratio forces it to stay card-shaped without overflowing -->
-            <div id="board" class="grid grid-cols-3 gap-2 sm:gap-4 h-full max-h-[500px] aspect-[3/4] w-auto">
-                <div id="pile-NW" class="pile" onclick="clickPile('NW')"></div>
-                <div id="pile-N" class="pile" onclick="clickPile('N')"></div>
-                <div id="pile-NE" class="pile" onclick="clickPile('NE')"></div>
-                
-                <div id="pile-W" class="pile" onclick="clickPile('W')"></div>
-                
-                <!-- Deck -->
-                <div id="pile-DECK" class="pile border-none deck-pattern cursor-default overflow-hidden">
-                    <div class="bg-white/20 w-[80%] h-[80%] rounded border border-white/30 flex items-center justify-center transform -rotate-12">
-                        <span class="text-[9px] sm:text-xs font-black tracking-widest text-white drop-shadow-md">DECK</span>
+        <!-- Main Game Container (flex row: board left, hand right) -->
+        <div class="flex-1 min-h-0 flex gap-2 sm:gap-4">
+            
+            <!-- Board Container (Left side) -->
+            <div class="flex items-center justify-center py-2 flex-shrink-0">
+                <!-- Grid aspect ratio forces it to stay card-shaped without overflowing -->
+                <div id="board" class="grid grid-cols-3 gap-2 sm:gap-4 h-full max-h-[500px] aspect-[3/4] w-auto">
+                    <div id="pile-NW" class="pile" onclick="clickPile('NW')"></div>
+                    <div id="pile-N" class="pile" onclick="clickPile('N')"></div>
+                    <div id="pile-NE" class="pile" onclick="clickPile('NE')"></div>
+                    
+                    <div id="pile-W" class="pile" onclick="clickPile('W')"></div>
+                    
+                    <!-- Deck -->
+                    <div id="pile-DECK" class="pile border-none deck-pattern cursor-default overflow-hidden">
+                        <div class="bg-white/20 w-[80%] h-[80%] rounded border border-white/30 flex items-center justify-center transform -rotate-12">
+                            <span class="text-[9px] sm:text-xs font-black tracking-widest text-white drop-shadow-md">DECK</span>
+                        </div>
+                        <span id="deck-count" class="absolute bottom-1 text-[8px] sm:text-[10px] font-bold text-white/90"></span>
                     </div>
-                    <span id="deck-count" class="absolute bottom-1 text-[8px] sm:text-[10px] font-bold text-white/90"></span>
+                    
+                    <div id="pile-E" class="pile" onclick="clickPile('E')"></div>
+                    
+                    <div id="pile-SW" class="pile" onclick="clickPile('SW')"></div>
+                    <div id="pile-S" class="pile" onclick="clickPile('S')"></div>
+                    <div id="pile-SE" class="pile" onclick="clickPile('SE')"></div>
                 </div>
-                
-                <div id="pile-E" class="pile" onclick="clickPile('E')"></div>
-                
-                <div id="pile-SW" class="pile" onclick="clickPile('SW')"></div>
-                <div id="pile-S" class="pile" onclick="clickPile('S')"></div>
-                <div id="pile-SE" class="pile" onclick="clickPile('SE')"></div>
             </div>
-        </div>
 
-        <!-- Player Hand (Fixed height at bottom) -->
-        <div id="hand-container" class="flex-none h-[110px] sm:h-[140px] mt-2 glass-panel rounded-t-xl sm:rounded-xl shadow-2xl p-3 flex gap-2 overflow-x-auto items-center">
-            <!-- Cards rendered here -->
+            <!-- Player Hand (Right side, vertical stack) -->
+            <div id="hand-container" class="flex-1 glass-panel rounded-xl sm:rounded-xl shadow-2xl p-2 sm:p-3 flex gap-2 items-start content-start">
+                <!-- Cards rendered here -->
+            </div>
         </div>
     </div>
 
