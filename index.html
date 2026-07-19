@@ -80,18 +80,27 @@
         initGame();
         render();
     }
-
+    
     // --- Joiner Networking ---
     document.getElementById('joinBtn').onclick = () => {
         const id = document.getElementById('gameName').value;
         peer = new Peer();
+        
         peer.on('open', () => {
             conn = peer.connect(id);
+            
+            // 1. REGISTER THE LISTENER FIRST
+            conn.on('data', (d) => {
+                console.log("Data received:", d); // Check console to see if this fires
+                handleData(d);
+            });
+
+            // 2. ONLY THEN, SEND THE READY SIGNAL
             conn.on('open', () => {
+                console.log("Connected! Sending ready signal...");
                 conn.send('ready');
                 document.getElementById('status').innerText = "Connected! Waiting for host...";
             });
-            conn.on('data', handleData);
         });
     };
 
