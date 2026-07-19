@@ -7,48 +7,80 @@
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <style>
-        .card { width: 45px; height: 65px; border-radius: 6px; border: 1px solid #ccc; background: white; display: flex; flex-direction: column; align-items: center; justify-content: start; font-weight: bold; cursor: grab; user-select: none; font-size: 10px; padding-top: 2px; }
-        .text-red { color: #dc2626 !important; } 
-        .text-black { color: #000 !important; }
-        .pile { width: 60px; height: 85px; border: 2px dashed #6b7280; border-radius: 8px; background: white; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .pile-count { position: absolute; bottom: 2px; font-size: 9px; color: #6b7280; }
-        .stacked-bottom { position: absolute; top: 5px; opacity: 0.6; transform: scale(0.9); }
-        .stacked-top { position: absolute; top: 15px; z-index: 10; border: 1px solid #000; }
-        #hand { display: flex; gap: 8px; padding: 15px; background: #e5e7eb; min-height: 80px; border-radius: 8px; overflow-x: auto; }
+        /* Hand Cards */
+        .card-in-hand { width: 50px; height: 75px; border-radius: 6px; border: 1px solid #cbd5e1; background: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; user-select: none; transition: transform 0.2s, box-shadow 0.2s; flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        
+        /* Board Grid & Piles */
+        .pile { width: 64px; height: 90px; border: 2px dashed #9ca3af; border-radius: 8px; background: transparent; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .pile-count { position: absolute; bottom: -22px; font-size: 11px; color: #6b7280; font-weight: bold; width: 100%; text-align: center; }
+        
+        /* Stacked Card Visuals (20% offset) */
+        .card-in-pile { position: absolute; width: 48px; height: 68px; border-radius: 4px; border: 1px solid #64748b; background: white; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; font-weight: bold; padding-top: 2px; user-select: none; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
+        .stacked-bottom { top: 4px; left: 7px; z-index: 1; opacity: 0.9; background-color: #f8fafc; }
+        .stacked-top { top: 18px; left: 7px; z-index: 2; border-color: #475569; }
+        
+        /* Misc */
+        #hand { display: flex; gap: 8px; padding: 15px; background: #e5e7eb; min-height: 105px; border-radius: 8px; overflow-x: auto; }
+        .text-red-600 { color: #e11d48 !important; }
+        .text-black { color: #000000 !important; }
     </style>
 </head>
-<body class="bg-gray-100 p-4">
+<body class="bg-gray-100 p-4 font-sans">
 
-    <div id="setup" class="max-w-md mx-auto bg-white p-6 rounded shadow">
-        <h1 class="text-xl font-bold mb-4">King in the Corner</h1>
-        <input id="gameName" placeholder="Create or Join Game ID" class="border p-2 w-full mb-4">
-        <div class="flex gap-2">
-            <button id="createBtn" class="bg-blue-600 text-white px-4 py-2 rounded flex-1">Create Game</button>
-            <button id="joinBtn" class="bg-green-600 text-white px-4 py-2 rounded flex-1">Join Game</button>
+    <!-- Setup Screen -->
+    <div id="setup" class="max-w-md mx-auto bg-white p-6 rounded shadow-lg mt-10">
+        <h1 class="text-2xl font-extrabold mb-4 text-center text-gray-800">King in the Corner</h1>
+        <input id="gameName" placeholder="Enter Game ID (e.g. 12345)" class="border border-gray-300 p-3 rounded w-full mb-4 text-center font-bold tracking-widest uppercase">
+        <div class="flex gap-3">
+            <button id="createBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-3 rounded flex-1 transition">Create Game</button>
+            <button id="joinBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-3 rounded flex-1 transition">Join Game</button>
         </div>
-        <p id="status" class="mt-4 text-sm text-gray-500"></p>
+        <p id="status" class="mt-4 text-sm text-center text-gray-500 font-medium"></p>
     </div>
 
-    <div id="game" class="hidden max-w-2xl mx-auto">
-        <div class="flex justify-between items-center mb-4 bg-white p-3 rounded shadow">
-            <h2 id="turnText" class="font-bold text-lg">Waiting...</h2>
-            <button id="passBtn" class="bg-yellow-500 text-white px-4 py-2 rounded">Pass Turn</button>
+    <!-- Active Game Screen -->
+    <div id="game" class="hidden max-w-3xl mx-auto mt-4">
+        
+        <!-- Header / Turn Info -->
+        <div id="headerBar" class="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow border-l-4 border-gray-300 transition-colors">
+            <h2 id="turnText" class="font-bold text-xl text-gray-700">Waiting for opponent...</h2>
+            <button id="passBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold px-6 py-2 rounded shadow transition opacity-50 cursor-not-allowed">Pass Turn</button>
         </div>
-        <div id="board" class="grid grid-cols-3 gap-2 mb-6">
-            <div id="pile-NW" class="pile" onclick="playToPile('NW')"></div><div id="pile-N" class="pile" onclick="playToPile('N')"></div><div id="pile-NE" class="pile" onclick="playToPile('NE')"></div>
-            <div id="pile-W" class="pile" onclick="playToPile('W')"></div><div id="pile-DECK" class="pile bg-gray-200 cursor-default"><span class="text-xs text-gray-500">DECK</span></div><div id="pile-E" class="pile" onclick="playToPile('E')"></div>
-            <div id="pile-SW" class="pile" onclick="playToPile('SW')"></div><div id="pile-S" class="pile" onclick="playToPile('S')"></div><div id="pile-SE" class="pile" onclick="playToPile('SE')"></div>
+
+        <!-- Strict CSS Grid to prevent Deck from stretching -->
+        <div id="board" class="grid grid-cols-3 gap-x-6 gap-y-10 place-items-center mb-12 w-max mx-auto p-4">
+            <div id="pile-NW" class="pile" onclick="clickPile('NW')"></div>
+            <div id="pile-N" class="pile" onclick="clickPile('N')"></div>
+            <div id="pile-NE" class="pile" onclick="clickPile('NE')"></div>
+            
+            <div id="pile-W" class="pile" onclick="clickPile('W')"></div>
+            <!-- Styled DECK perfectly matches card sizes -->
+            <div id="pile-DECK" class="pile border-none bg-blue-800 text-white shadow-inner flex flex-col cursor-default">
+                <span class="text-[10px] font-bold tracking-widest transform -rotate-45 opacity-70 mt-2">DECK</span>
+                <span id="deck-count" class="absolute bottom-1 text-[9px] opacity-60"></span>
+            </div>
+            <div id="pile-E" class="pile" onclick="clickPile('E')"></div>
+            
+            <div id="pile-SW" class="pile" onclick="clickPile('SW')"></div>
+            <div id="pile-S" class="pile" onclick="clickPile('S')"></div>
+            <div id="pile-SE" class="pile" onclick="clickPile('SE')"></div>
         </div>
-        <div id="hand" class="shadow-inner"></div>
+
+        <!-- Player Hand -->
+        <div id="hand" class="shadow-inner border border-gray-300"></div>
     </div>
 
 <script>
-    let peer, conn, myHand = [], board = {}, deck = [], myTurn = false, selectedIdx = null;
+    let peer, conn, myHand = [], board = {}, deck = [];
+    let myTurn = false;
+    let selectedHandIdx = null; // Tapping a card in hand
+    let selectedPileId = null;  // Tapping a pile to move it
 
     // --- Networking ---
     document.getElementById('createBtn').onclick = () => {
-        const id = document.getElementById('gameName').value;
+        const id = document.getElementById('gameName').value.trim();
         peer = new Peer(id);
+        peer.on('open', () => document.getElementById('status').innerText = "Host Ready! Waiting for P2...");
         peer.on('connection', (c) => {
             conn = c;
             conn.on('data', (d) => { if (d === 'ready') startHostGame(); });
@@ -56,15 +88,17 @@
     };
 
     document.getElementById('joinBtn').onclick = () => {
-        const id = document.getElementById('gameName').value;
+        const id = document.getElementById('gameName').value.trim();
         peer = new Peer();
         peer.on('open', () => {
             conn = peer.connect(id);
             conn.on('data', handleData);
             conn.on('open', () => conn.send('ready'));
+            document.getElementById('status').innerText = "Connecting...";
         });
     };
 
+    // --- Game Setup ---
     function startHostGame() {
         const suits = ['♥', '♦', '♣', '♠'];
         const vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
@@ -75,18 +109,20 @@
         board = {N:[],S:[],E:[],W:[],NW:[],NE:[],SW:[],SE:[]};
         board.N.push(deck.pop()); board.S.push(deck.pop()); board.E.push(deck.pop()); board.W.push(deck.pop());
 
-        myHand = deck.splice(0, 8);
-        let p2Hand = deck.splice(0, 7);
+        myHand = deck.splice(0, 8); // P1 gets 8
+        let p2Hand = deck.splice(0, 7); // P2 gets 7
         myTurn = true;
         
         conn.send({type: 'init', p2Hand, board, deck, turn: false});
-        initGame(); render();
+        initGame(); 
+        render();
     }
 
     function initGame() {
         document.getElementById('setup').classList.add('hidden');
         document.getElementById('game').classList.remove('hidden');
         Sortable.create(document.getElementById('hand'), {
+            animation: 150,
             onEnd: (evt) => {
                 const item = myHand.splice(evt.oldIndex, 1)[0];
                 myHand.splice(evt.newIndex, 0, item);
@@ -96,83 +132,196 @@
     }
 
     function handleData(d) {
-        if(d.type === 'init') { myHand = d.p2Hand; board = d.board; deck = d.deck; myTurn = d.turn; initGame(); } 
-        else if(d.type === 'move') { board = d.board; deck = d.deck; render(); }
-        else if(d.type === 'pass') { myTurn = true; render(); }
+        if(d.type === 'init') { 
+            myHand = d.p2Hand; board = d.board; deck = d.deck; myTurn = d.turn; 
+            initGame(); 
+        } 
+        else if(d.type === 'move') { 
+            board = d.board; deck = d.deck; 
+        } 
+        else if(d.type === 'pass') { 
+            myTurn = true; 
+            // Auto-draw a card when it becomes your turn
+            if(deck.length > 0) {
+                myHand.push(deck.pop());
+                conn.send({type: 'move', board, deck});
+            }
+        }
         render();
     }
 
-    function playToPile(pileId) {
-        if (!myTurn || selectedIdx === null) return;
-        const card = myHand[selectedIdx];
-        const pile = board[pileId];
-        const isCorner = ['NW','NE','SW','SE'].includes(pileId);
-        
-        let canPlay = false;
-        if (pile.length === 0) {
-            canPlay = isCorner ? card.v === 'K' : true;
-        } else {
-            const top = pile[pile.length - 1];
-            const topColor = (top.s === '♥' || top.s === '♦') ? 'red' : 'black';
-            const cardColor = (card.s === '♥' || card.s === '♦') ? 'red' : 'black';
-            canPlay = (card.val === top.val - 1) && (cardColor !== topColor);
+    // --- Interaction Logic ---
+    function selectHandCard(idx) {
+        if (!myTurn) return;
+        selectedHandIdx = (selectedHandIdx === idx) ? null : idx; // Toggle
+        selectedPileId = null; // Clear pile selection if switching to hand
+        render();
+    }
+
+    function clickPile(pileId) {
+        if (!myTurn) return;
+
+        // Case 1: Playing a card from Hand to Pile
+        if (selectedHandIdx !== null) {
+            playCardToPile(pileId);
+            return;
         }
 
-        if (canPlay) {
-            board[pileId].push(myHand.splice(selectedIdx, 1)[0]);
-            selectedIdx = null;
-            conn.send({type: 'move', board, deck});
+        // Case 2: Moving a Pile to another Pile
+        if (selectedPileId !== null) {
+            if (selectedPileId === pileId) {
+                selectedPileId = null; // Deselect if clicking same pile
+            } else {
+                movePileToPile(selectedPileId, pileId);
+            }
+            render();
+            return;
+        }
+
+        // Case 3: Selecting a Pile to move it (must have cards)
+        if (board[pileId].length > 0) {
+            selectedPileId = pileId;
             render();
         }
     }
 
-    function render() {
-        document.getElementById('turnText').innerText = myTurn ? "Your Turn" : "Opponent's Turn";
+    function playCardToPile(targetPileId) {
+        const card = myHand[selectedHandIdx];
+        const targetPile = board[targetPileId];
+        const isCorner = ['NW','NE','SW','SE'].includes(targetPileId);
         
-        const h = document.getElementById('hand'); h.innerHTML = '';
-        myHand.forEach((c, i) => {
-            const color = (c.s === '♥' || c.s === '♦') ? 'text-red' : 'text-black';
-            const el = document.createElement('div');
-            el.className = `card ${color} ${selectedIdx === i ? 'ring-2 ring-blue-400' : ''}`;
-            el.innerHTML = `<span>${c.v}</span><span>${c.s}</span>`;
-            el.onclick = () => { selectedIdx = i; render(); };
-            h.appendChild(el);
-        });
+        let canPlay = false;
+        if (targetPile.length === 0) {
+            canPlay = isCorner ? card.v === 'K' : true; // Kings in corner, anything in center 4
+        } else {
+            const top = targetPile[targetPile.length - 1];
+            const topColor = (top.s === '♥' || top.s === '♦') ? 'red' : 'black';
+            const cardColor = (card.s === '♥' || card.s === '♦') ? 'red' : 'black';
+            canPlay = (card.val === top.val - 1) && (cardColor !== topColor); // Alt color, 1 lower
+        }
 
-        for(let k in board) {
-            const p = document.getElementById('pile-'+k);
-            p.innerHTML = '';
-            if (board[k].length > 0) {
-                // Bottom Card (peek)
-                if (board[k].length > 1) {
-                    const b = board[k][0];
-                    const bc = (b.s === '♥' || b.s === '♦') ? 'text-red' : 'text-black';
-                    const bEl = document.createElement('div');
-                    bEl.className = `card ${bc} stacked-bottom`;
-                    bEl.innerHTML = `<span>${b.v}</span><span>${b.s}</span>`;
-                    p.appendChild(bEl);
-                }
-                // Top Card
-                const t = board[k][board[k].length - 1];
-                const tc = (t.s === '♥' || t.s === '♦') ? 'text-red' : 'text-black';
-                const tEl = document.createElement('div');
-                tEl.className = `card ${tc} stacked-top`;
-                tEl.innerHTML = `<span>${t.v}</span><span>${t.s}</span>`;
-                p.appendChild(tEl);
-            }
-            const count = document.createElement('div');
-            count.className = 'pile-count';
-            count.innerText = board[k].length;
-            p.appendChild(count);
+        if (canPlay) {
+            board[targetPileId].push(myHand.splice(selectedHandIdx, 1)[0]);
+            selectedHandIdx = null; // Deselect hand card
+            conn.send({type: 'move', board, deck}); // SEND MOVE, BUT KEEP TURN
+            render();
+        } else {
+            selectedHandIdx = null; // Invalid move, just deselect
+            render();
         }
     }
 
+    function movePileToPile(sourceId, targetId) {
+        const sourcePile = board[sourceId];
+        const targetPile = board[targetId];
+        const bottomCardOfSource = sourcePile[0]; 
+        const isCorner = ['NW','NE','SW','SE'].includes(targetId);
+
+        let canPlay = false;
+        if (targetPile.length === 0) {
+            canPlay = isCorner ? bottomCardOfSource.v === 'K' : true;
+        } else {
+            const topOfTarget = targetPile[targetPile.length - 1];
+            const targetColor = (topOfTarget.s === '♥' || topOfTarget.s === '♦') ? 'red' : 'black';
+            const sourceColor = (bottomCardOfSource.s === '♥' || bottomCardOfSource.s === '♦') ? 'red' : 'black';
+            canPlay = (bottomCardOfSource.val === topOfTarget.val - 1) && (sourceColor !== targetColor);
+        }
+
+        if (canPlay) {
+            board[targetId] = targetPile.concat(sourcePile); // Merge piles
+            board[sourceId] = []; // Empty source
+            selectedPileId = null;
+            conn.send({type: 'move', board, deck});
+            render();
+        } else {
+            selectedPileId = null;
+            render();
+        }
+    }
+
+    // --- Passing Turn ---
     document.getElementById('passBtn').onclick = () => {
         if(!myTurn) return;
-        myTurn = false;
+        myTurn = false; // Turn ONLY ends here
+        selectedHandIdx = null;
+        selectedPileId = null;
         conn.send({type: 'pass'});
         render();
     };
+
+    // --- Rendering ---
+    function render() {
+        // Turn Header Visulals
+        const turnEl = document.getElementById('turnText');
+        const headerBar = document.getElementById('headerBar');
+        const passBtn = document.getElementById('passBtn');
+        
+        if (myTurn) {
+            turnEl.innerText = "Your Turn (Make moves, then Pass)";
+            turnEl.className = "font-extrabold text-xl text-green-700";
+            headerBar.className = "flex justify-between items-center mb-6 bg-green-50 p-4 rounded-xl shadow border-l-4 border-green-500 transition-colors";
+            passBtn.className = "bg-yellow-500 hover:bg-yellow-600 text-white font-bold px-6 py-2 rounded shadow transition";
+        } else {
+            turnEl.innerText = "Opponent's Turn...";
+            turnEl.className = "font-bold text-xl text-gray-500";
+            headerBar.className = "flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow border-l-4 border-gray-300 transition-colors";
+            passBtn.className = "bg-gray-400 text-white font-bold px-6 py-2 rounded shadow opacity-50 cursor-not-allowed";
+        }
+        
+        // Hand
+        const h = document.getElementById('hand'); h.innerHTML = '';
+        myHand.forEach((c, i) => {
+            const color = (c.s === '♥' || c.s === '♦') ? 'text-red-600' : 'text-black';
+            const isSelected = selectedHandIdx === i;
+            const el = document.createElement('div');
+            el.className = `card-in-hand ${color} ${isSelected ? 'ring-4 ring-blue-500 transform -translate-y-2' : ''}`;
+            el.innerHTML = `<span class="text-sm">${c.v}</span><span class="text-2xl">${c.s}</span>`;
+            el.onclick = () => selectHandCard(i);
+            h.appendChild(el);
+        });
+
+        // Board Piles
+        for (let k in board) {
+            const p = document.getElementById('pile-' + k);
+            p.innerHTML = '';
+            
+            // Highlight selected pile
+            if (selectedPileId === k) {
+                p.classList.add('ring-4', 'ring-purple-500', 'bg-purple-50');
+            } else {
+                p.classList.remove('ring-4', 'ring-purple-500', 'bg-purple-50');
+            }
+
+            if (board[k].length > 0) {
+                // Bottom Card peek (if more than 1)
+                if (board[k].length > 1) {
+                    const b = board[k][0];
+                    const bc = (b.s === '♥' || b.s === '♦') ? 'text-red-600' : 'text-black';
+                    const bEl = document.createElement('div');
+                    bEl.className = `card-in-pile stacked-bottom ${bc}`;
+                    bEl.innerHTML = `<span class="text-[13px]">${b.v}</span><span class="text-[12px]">${b.s}</span>`;
+                    p.appendChild(bEl);
+                }
+                
+                // Top Card (offset down by exactly 14px)
+                const t = board[k][board[k].length - 1];
+                const tc = (t.s === '♥' || t.s === '♦') ? 'text-red-600' : 'text-black';
+                const tEl = document.createElement('div');
+                tEl.className = `card-in-pile stacked-top ${tc}`;
+                tEl.innerHTML = `<span class="text-[13px]">${t.v}</span><span class="text-[12px]">${t.s}</span>`;
+                p.appendChild(tEl);
+            }
+            
+            // Text underneath to show actual count
+            const count = document.createElement('div');
+            count.className = 'pile-count';
+            count.innerText = board[k].length > 0 ? board[k].length : '';
+            p.appendChild(count);
+        }
+
+        // Deck Count Update
+        document.getElementById('deck-count').innerText = deck.length + " left";
+    }
 </script>
 </body>
 </html>
