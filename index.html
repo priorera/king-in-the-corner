@@ -10,376 +10,146 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
     <style>
-        :root {
-            --card-w: clamp(70px, 12vw, 100px);
-            --card-h: calc(var(--card-w) * 1.4);
-        }
-
-        /* Mobile Optimization */
-        @media (max-width: 640px) {
-            :root {
-                --card-w: 45px; 
-            }
-            #hand-container { gap: 0.2rem !important; padding: 0.5rem !important; }
-        }
-
+        :root { --card-w: clamp(70px, 12vw, 100px); --card-h: calc(var(--card-w) * 1.4); }
+        @media (max-width: 640px) { :root { --card-w: 45px; } #hand-container { gap: 0.2rem !important; padding: 0.5rem !important; } }
         * { box-sizing: border-box; }
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%; height: 100dvh;
-            overflow: hidden;
-            background: radial-gradient(circle at center, #0f766e 0%, #042f2e 100%);
-            font-family: ui-sans-serif, system-ui, sans-serif;
-            color: #f1f5f9;
-        }
-
-        /* Card Uniformity */
-        .card-base {
-            width: var(--card-w);
-            height: var(--card-h);
-            background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
-            border-radius: 6px;
-            border: 1px solid #cbd5e1;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            display: flex; flex-direction: column; user-select: none;
-            overflow: hidden; position: relative;
-        }
-
-        /* Piles */
-        .pile { 
-            width: var(--card-w); 
-            height: var(--card-h);
-            border: 2px dashed rgba(255,255,255,0.4); 
-            border-radius: 6px; 
-            position: relative; 
-            display: flex; align-items: center; justify-content: center; 
-            transition: all 0.2s; cursor: pointer;
-        }
-
-        /* Stacked Card Visibility */
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; height: 100dvh; overflow: hidden; background: radial-gradient(circle at center, #0f766e 0%, #042f2e 100%); font-family: ui-sans-serif, system-ui, sans-serif; color: #f1f5f9; }
+        .card-base { width: var(--card-w); height: var(--card-h); background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%); border-radius: 6px; border: 1px solid #cbd5e1; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); display: flex; flex-direction: column; user-select: none; overflow: hidden; position: relative; }
+        .pile { width: var(--card-w); height: var(--card-h); border: 2px dashed rgba(255,255,255,0.4); border-radius: 6px; position: relative; display: flex; align-items: center; justify-content: center; transition: all 0.2s; cursor: pointer; }
         .card-in-pile { position: absolute; }
-        .stacked-bottom { 
-            z-index: 1; 
-            transform: translate(-14px, -14px) scale(0.9);
-            filter: brightness(0.85);
-        }
-        .stacked-top { 
-            z-index: 2; 
-            transform: translate(14px, 14px);
-            border: 1px solid #94a3b8; 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.5); 
-        }
-        
-        /* Layout */
-        #game { display: flex; flex-direction: column; width: 100%; height: 100%; padding: 1rem; gap: 1rem; }
-        .game-container { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 1.5rem; }
-        
-        #board {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 2rem;
-            justify-items: center;
-        }
-
-        #hand-container {
-            display: flex; flex-wrap: wrap; justify-content: center;
-            gap: 0.5rem; padding: 1rem;
-            max-width: 95vw;
-        }
-
+        .stacked-bottom { z-index: 1; transform: translate(-10px, -10px) scale(0.9); filter: brightness(0.85); }
+        .stacked-top { z-index: 2; transform: translate(10px, 10px); border: 1px solid #94a3b8; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
+        #game { display: flex; flex-direction: column; width: 100%; height: 100%; padding: 0.5rem; justify-content: flex-start; }
+        .game-container { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+        #board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; justify-items: center; margin-top: 0.5rem; }
+        #hand-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; padding: 0.75rem; max-width: 95vw; }
         .card-in-hand { cursor: pointer; transition: transform 0.2s; }
-
-        .deck-pattern {
-            background: repeating-linear-gradient( 45deg, #1e3a8a, #1e3a8a 5px, #1e40af 5px, #1e40af 10px );
-            border: 2px solid white; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-        }
-
-        /* Card Content */
-        .card-value-container { display: flex; flex-direction: column; align-items: flex-start; padding: 6px; line-height: 1; z-index: 10; }
-        .card-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2rem; opacity: 0.15; z-index: 0; pointer-events: none; }
-        
+        .deck-pattern { background: repeating-linear-gradient( 45deg, #1e3a8a, #1e3a8a 5px, #1e40af 5px, #1e40af 10px ); border: 2px solid white; }
         .glass-panel { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .text-red-card { color: #dc2626 !important; }
-        .text-black-card { color: #0f172a !important; }
+        .text-red-card { color: #dc2626 !important; } .text-black-card { color: #0f172a !important; }
     </style>
 </head>
 <body class="flex flex-col text-slate-100">
 
-    <!-- Setup Screen -->
     <div id="setup" class="max-w-md mx-auto w-full p-8 mt-10 glass-panel rounded-3xl shadow-2xl">
         <h1 class="text-3xl font-extrabold mb-6 text-center text-white">King in the Corner</h1>
-        <input id="gameName" placeholder="Game ID (e.g. 1234)" class="bg-white/90 text-gray-900 border-0 p-4 rounded-xl w-full mb-4 text-center font-bold tracking-widest uppercase focus:ring-4 focus:ring-emerald-400">
+        <input id="gameName" placeholder="Game ID (e.g. 1234)" class="bg-white/90 text-gray-900 border-0 p-4 rounded-xl w-full mb-4 text-center font-bold tracking-widest uppercase">
         <div class="flex gap-3">
-            <button id="createBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-4 rounded-xl flex-1 transition shadow-lg">Create</button>
-            <button id="joinBtn" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-4 rounded-xl flex-1 transition shadow-lg">Join</button>
+            <button id="createBtn" class="bg-emerald-600 px-4 py-4 rounded-xl flex-1 font-bold">Create</button>
+            <button id="joinBtn" class="bg-blue-600 px-4 py-4 rounded-xl flex-1 font-bold">Join</button>
         </div>
         <p id="status" class="mt-4 text-sm text-center text-emerald-200 font-medium"></p>
     </div>
 
-    <!-- Active Game Screen (Hidden by Default) -->
     <div id="game" style="display: none;">
-        <div id="headerBar" class="flex justify-between items-center glass-panel p-4 rounded-xl shadow-lg border-l-4 transition-colors">
-            <h2 id="turnText" class="font-bold text-lg text-white">Waiting...</h2>
-            <button id="passBtn" class="bg-amber-500 text-amber-950 font-bold px-4 py-2 rounded-lg shadow transition opacity-50 cursor-not-allowed">Pass Turn</button>
-        </div>
-
         <div class="game-container">
             <div id="board">
                 <div id="pile-NW" class="pile" onclick="clickPile('NW')"></div>
                 <div id="pile-N" class="pile" onclick="clickPile('N')"></div>
                 <div id="pile-NE" class="pile" onclick="clickPile('NE')"></div>
                 <div id="pile-W" class="pile" onclick="clickPile('W')"></div>
-                <div id="pile-DECK" class="pile deck-pattern cursor-default">
-                    <span class="text-[0.6rem] font-black tracking-widest text-white/50">DECK</span>
-                </div>
+                <div id="pile-DECK" class="pile deck-pattern cursor-default"></div>
                 <div id="pile-E" class="pile" onclick="clickPile('E')"></div>
                 <div id="pile-SW" class="pile" onclick="clickPile('SW')"></div>
                 <div id="pile-S" class="pile" onclick="clickPile('S')"></div>
                 <div id="pile-SE" class="pile" onclick="clickPile('SE')"></div>
             </div>
-
-            <div id="hand-container" class="glass-panel rounded-xl shadow-2xl">
+            <div id="hand-container" class="glass-panel rounded-xl shadow-2xl"></div>
+            <div id="headerBar" class="flex flex-row-reverse justify-between items-center glass-panel p-3 px-6 rounded-xl shadow-lg border-l-4 w-full max-w-sm">
+                <h2 id="turnText" class="font-bold">Waiting...</h2>
+                <button id="passBtn" class="bg-amber-400 text-amber-950 font-black px-4 py-2 rounded-lg">Pass Turn</button>
             </div>
         </div>
     </div>
 
     <div id="winModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
-        <div class="bg-white rounded-3xl p-8 text-center max-w-sm w-full shadow-2xl">
+        <div class="bg-white rounded-3xl p-8 text-center max-w-sm w-full">
             <h2 id="winTitle" class="text-3xl font-black mb-2 text-black"></h2>
-            <button onclick="location.reload()" class="bg-emerald-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition w-full">Play Again</button>
+            <button onclick="location.reload()" class="bg-emerald-500 py-3 px-8 rounded-full font-bold">Play Again</button>
         </div>
     </div>
 
 <script>
     let peer, conn, myHand = [], board = {}, deck = [];
     let myTurn = false;
-    let selectedHandIdx = null; 
-    let selectedPileId = null;  
+    let selectedHandIdx = null, selectedPileId = null;
 
-    // Networking
     document.getElementById('createBtn').onclick = () => {
         const id = document.getElementById('gameName').value.trim();
         peer = new Peer(id);
         peer.on('open', () => document.getElementById('status').innerText = "Host Ready! Waiting for P2...");
-        peer.on('connection', (c) => {
-            conn = c;
-            conn.on('data', handleData);
-            conn.on('data', (d) => { if (d === 'ready') startHostGame(); });
-        });
+        peer.on('connection', (c) => { conn = c; conn.on('data', handleData); conn.on('data', (d) => { if (d === 'ready') startHostGame(); }); });
     };
 
     document.getElementById('joinBtn').onclick = () => {
         const id = document.getElementById('gameName').value.trim();
         peer = new Peer();
         peer.on('open', () => {
+            document.getElementById('status').innerText = "Connecting...";
             conn = peer.connect(id);
             conn.on('data', handleData);
             conn.on('open', () => conn.send('ready'));
-            document.getElementById('status').innerText = "Connecting...";
         });
     };
 
     function startHostGame() {
-        const suits = ['♥', '♦', '♣', '♠'];
-        const vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
-        deck = [];
-        for(let s of suits) for(let v of vals) deck.push({s, v, val: vals.indexOf(v)+1});
+        const suits = ['♥', '♦', '♣', '♠'], vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+        deck = []; for(let s of suits) for(let v of vals) deck.push({s, v, val: vals.indexOf(v)+1});
         deck.sort(() => Math.random() - 0.5);
-
         board = {N:[],S:[],E:[],W:[],NW:[],NE:[],SW:[],SE:[]};
         board.N.push(deck.pop()); board.S.push(deck.pop()); board.E.push(deck.pop()); board.W.push(deck.pop());
-
-        myHand = deck.splice(0, 8); 
-        let p2Hand = deck.splice(0, 7); 
-        myTurn = true;
-        
+        myHand = deck.splice(0, 8); let p2Hand = deck.splice(0, 7); myTurn = true;
         conn.send({type: 'init', p2Hand, board, deck, turn: false});
-        initGame(); 
-        render();
+        initGame(); render();
     }
 
-    function initGame() {
-        document.getElementById('setup').classList.add('hidden');
-        document.getElementById('game').style.display = 'flex';
-        
-        Sortable.create(document.getElementById('hand-container'), {
-            animation: 150,
-            ghostClass: 'opacity-50',
-            onEnd: (evt) => {
-                const item = myHand.splice(evt.oldIndex, 1)[0];
-                myHand.splice(evt.newIndex, 0, item);
-                render();
-            }
-        });
-    }
+    function initGame() { document.getElementById('setup').classList.add('hidden'); document.getElementById('game').style.display = 'flex'; Sortable.create(document.getElementById('hand-container'), { animation: 150, onEnd: (evt) => { const item = myHand.splice(evt.oldIndex, 1)[0]; myHand.splice(evt.newIndex, 0, item); render(); } }); }
 
     function handleData(d) {
-        if(d.type === 'init') { 
-            myHand = d.p2Hand; board = d.board; deck = d.deck; myTurn = d.turn; 
-            initGame(); 
-        } 
+        if(d.type === 'init') { myHand = d.p2Hand; board = d.board; deck = d.deck; myTurn = d.turn; initGame(); } 
         else if(d.type === 'move') { board = d.board; deck = d.deck; } 
-        else if(d.type === 'pass') { 
-            myTurn = true; 
-            if(deck.length > 0) {
-                myHand.push(deck.pop());
-                conn.send({type: 'move', board, deck});
-            }
-        }
+        else if(d.type === 'pass') { myTurn = true; if(deck.length > 0) { myHand.push(deck.pop()); conn.send({type: 'move', board, deck}); } }
         else if(d.type === 'win') { triggerWinScreen(false); }
         render();
     }
 
-    function selectHandCard(idx) {
-        if (!myTurn) return;
-        selectedHandIdx = (selectedHandIdx === idx) ? null : idx;
-        selectedPileId = null; 
-        render();
-    }
+    function selectHandCard(idx) { if (!myTurn) return; selectedHandIdx = (selectedHandIdx === idx) ? null : idx; selectedPileId = null; render(); }
 
     function clickPile(pileId) {
         if (!myTurn) return;
         if (selectedHandIdx !== null) { playCardToPile(pileId); return; }
-        if (selectedPileId !== null) {
-            if (selectedPileId === pileId) selectedPileId = null;
-            else movePileToPile(selectedPileId, pileId);
-            render();
-            return;
-        }
-        if (board[pileId].length > 0) {
-            selectedPileId = pileId;
-            render();
-        }
+        if (selectedPileId !== null) { if (selectedPileId === pileId) selectedPileId = null; else movePileToPile(selectedPileId, pileId); render(); return; }
+        if (board[pileId].length > 0) { selectedPileId = pileId; render(); }
     }
 
     function playCardToPile(targetPileId) {
-        const card = myHand[selectedHandIdx];
-        const targetPile = board[targetPileId];
-        const isCorner = ['NW','NE','SW','SE'].includes(targetPileId);
-        
-        let canPlay = false;
-        if (targetPile.length === 0) {
-            canPlay = isCorner ? card.v === 'K' : true; 
-        } else {
-            const top = targetPile[targetPile.length - 1];
-            const topColor = (top.s === '♥' || top.s === '♦') ? 'red' : 'black';
-            const cardColor = (card.s === '♥' || card.s === '♦') ? 'red' : 'black';
-            canPlay = (card.val === top.val - 1) && (cardColor !== topColor);
-        }
-
-        if (canPlay) {
-            board[targetPileId].push(myHand.splice(selectedHandIdx, 1)[0]);
-            selectedHandIdx = null; 
-            conn.send({type: 'move', board, deck});
-            checkWinCondition();
-            render();
-        } else {
-            selectedHandIdx = null; 
-            render();
-        }
+        const card = myHand[selectedHandIdx], targetPile = board[targetPileId], isCorner = ['NW','NE','SW','SE'].includes(targetPileId);
+        let canPlay = targetPile.length === 0 ? (isCorner ? card.v === 'K' : true) : (card.val === targetPile[targetPile.length - 1].val - 1 && ((card.s === '♥' || card.s === '♦') ? 'red' : 'black') !== ((targetPile[targetPile.length - 1].s === '♥' || targetPile[targetPile.length - 1].s === '♦') ? 'red' : 'black'));
+        if (canPlay) { board[targetPileId].push(myHand.splice(selectedHandIdx, 1)[0]); selectedHandIdx = null; conn.send({type: 'move', board, deck}); checkWinCondition(); render(); } else { selectedHandIdx = null; render(); }
     }
 
     function movePileToPile(sourceId, targetId) {
-        const sourcePile = board[sourceId];
-        const targetPile = board[targetId];
-        const bottomCardOfSource = sourcePile[0]; 
-        const isCorner = ['NW','NE','SW','SE'].includes(targetId);
-
-        let canPlay = false;
-        if (targetPile.length === 0) {
-            canPlay = isCorner ? bottomCardOfSource.v === 'K' : true;
-        } else {
-            const topOfTarget = targetPile[targetPile.length - 1];
-            const targetColor = (topOfTarget.s === '♥' || topOfTarget.s === '♦') ? 'red' : 'black';
-            const sourceColor = (bottomCardOfSource.s === '♥' || bottomCardOfSource.s === '♦') ? 'red' : 'black';
-            canPlay = (bottomCardOfSource.val === topOfTarget.val - 1) && (sourceColor !== targetColor);
-        }
-
-        if (canPlay) {
-            board[targetId] = targetPile.concat(sourcePile); 
-            board[sourceId] = []; 
-            selectedPileId = null;
-            conn.send({type: 'move', board, deck});
-            render();
-        } else {
-            selectedPileId = null;
-            render();
-        }
+        const sourcePile = board[sourceId], targetPile = board[targetId], bottomCardOfSource = sourcePile[0], isCorner = ['NW','NE','SW','SE'].includes(targetId);
+        let canPlay = targetPile.length === 0 ? (isCorner ? bottomCardOfSource.v === 'K' : true) : (bottomCardOfSource.val === targetPile[targetPile.length - 1].val - 1 && ((bottomCardOfSource.s === '♥' || bottomCardOfSource.s === '♦') ? 'red' : 'black') !== ((targetPile[targetPile.length - 1].s === '♥' || targetPile[targetPile.length - 1].s === '♦') ? 'red' : 'black'));
+        if (canPlay) { board[targetId] = targetPile.concat(sourcePile); board[sourceId] = []; selectedPileId = null; conn.send({type: 'move', board, deck}); render(); } else { selectedPileId = null; render(); }
     }
 
-    function checkWinCondition() {
-        if (myHand.length === 0) {
-            conn.send({type: 'win'});
-            triggerWinScreen(true);
-        }
-    }
-
-    function triggerWinScreen(isWinner) {
-        const modal = document.getElementById('winModal');
-        const title = document.getElementById('winTitle');
-        modal.classList.remove('hidden');
-        title.innerText = isWinner ? "You Won! 🎉" : "Opponent Won 😢";
-    }
-
-    document.getElementById('passBtn').onclick = () => {
-        if(!myTurn) return;
-        myTurn = false;
-        selectedHandIdx = null;
-        selectedPileId = null;
-        conn.send({type: 'pass'});
-        render();
-    };
+    function checkWinCondition() { if (myHand.length === 0) { conn.send({type: 'win'}); triggerWinScreen(true); } }
+    function triggerWinScreen(isWinner) { document.getElementById('winModal').classList.remove('hidden'); document.getElementById('winTitle').innerText = isWinner ? "You Won! 🎉" : "Opponent Won 😢"; }
+    document.getElementById('passBtn').onclick = () => { if(!myTurn) return; myTurn = false; selectedHandIdx = null; selectedPileId = null; conn.send({type: 'pass'}); render(); };
 
     function createCardHTML(c, extraClasses = "") {
         const color = (c.s === '♥' || c.s === '♦') ? 'text-red-card' : 'text-black-card';
-        return `
-            <div class="card-base ${extraClasses} ${color}">
-                <div class="card-value-container">
-                    <span class="text-xl font-black">${c.v}</span>
-                    <span class="text-sm font-bold">${c.s}</span>
-                </div>
-                <div class="card-watermark">${c.s}</div>
-            </div>`;
+        return `<div class="card-base ${extraClasses} ${color}"><div class="card-value-container"><span class="text-xl font-black">${c.v}</span><span class="text-sm font-bold">${c.s}</span></div><div class="card-watermark">${c.s}</div></div>`;
     }
 
     function render() {
-        const turnEl = document.getElementById('turnText');
-        const headerBar = document.getElementById('headerBar');
-        const passBtn = document.getElementById('passBtn');
-        
-        if (myTurn) {
-            turnEl.innerText = "Your Turn";
-            headerBar.className = "flex justify-between items-center glass-panel p-4 rounded-xl shadow-lg border-l-4 border-emerald-400";
-            passBtn.className = "bg-amber-400 text-amber-950 font-black px-4 py-2 rounded-lg shadow-lg";
-        } else {
-            turnEl.innerText = "Opponent's Turn...";
-            headerBar.className = "flex justify-between items-center glass-panel p-4 rounded-xl shadow-lg border-l-4 border-white/20 opacity-70";
-            passBtn.className = "bg-white/10 text-white/50 font-bold px-4 py-2 rounded-lg cursor-not-allowed";
-        }
-        
-        const h = document.getElementById('hand-container'); 
-        h.innerHTML = '';
-        myHand.forEach((c, i) => {
-            const isSelected = selectedHandIdx === i;
-            const activeClass = isSelected ? 'ring-4 ring-emerald-400 -translate-y-2' : '';
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = createCardHTML(c, 'card-in-hand ' + activeClass);
-            const el = tempDiv.firstElementChild;
-            el.onclick = () => selectHandCard(i);
-            h.appendChild(el);
-        });
-
-        for (let k in board) {
-            const p = document.getElementById('pile-' + k);
-            p.innerHTML = '';
-            
-            if (selectedPileId === k) p.classList.add('ring-4', 'ring-purple-400');
-            else p.classList.remove('ring-4', 'ring-purple-400');
-
-            if (board[k].length > 0) {
-                if (board[k].length > 1) p.innerHTML += createCardHTML(board[k][0], 'card-in-pile stacked-bottom');
-                p.innerHTML += createCardHTML(board[k][board[k].length - 1], 'card-in-pile stacked-top');
-            }
-        }
+        const turnEl = document.getElementById('turnText'), headerBar = document.getElementById('headerBar'), passBtn = document.getElementById('passBtn');
+        if (myTurn) { turnEl.innerText = "Your Turn"; headerBar.className = "flex flex-row-reverse justify-between items-center glass-panel p-3 px-6 rounded-xl shadow-lg border-l-4 border-emerald-400 w-full max-w-sm"; passBtn.className = "bg-amber-400 text-amber-950 font-black px-4 py-2 rounded-lg"; } 
+        else { turnEl.innerText = "Opponent's Turn..."; headerBar.className = "flex flex-row-reverse justify-between items-center glass-panel p-3 px-6 rounded-xl shadow-lg border-l-4 border-white/20 opacity-70 w-full max-w-sm"; passBtn.className = "bg-white/10 text-white/50 font-bold px-4 py-2 rounded-lg"; }
+        const h = document.getElementById('hand-container'); h.innerHTML = '';
+        myHand.forEach((c, i) => { const el = document.createElement('div'); el.innerHTML = createCardHTML(c, 'card-in-hand ' + (selectedHandIdx === i ? 'ring-4 ring-emerald-400' : '')); el.firstChild.onclick = () => selectHandCard(i); h.appendChild(el.firstChild); });
+        for (let k in board) { const p = document.getElementById('pile-' + k); p.innerHTML = ''; if (selectedPileId === k) p.classList.add('ring-4', 'ring-purple-400'); else p.classList.remove('ring-4', 'ring-purple-400'); if (board[k].length > 0) { if (board[k].length > 1) p.innerHTML += createCardHTML(board[k][0], 'card-in-pile stacked-bottom'); p.innerHTML += createCardHTML(board[k][board[k].length - 1], 'card-in-pile stacked-top'); } }
     }
 </script>
 </body>
