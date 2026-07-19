@@ -8,10 +8,11 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <style>
         .card { width: 50px; height: 75px; border-radius: 6px; border: 1px solid #ccc; background: white; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: grab; user-select: none; }
-        .red { color: #dc2626; } .black { color: #000; }
-        .pile { width: 60px; height: 85px; border: 2px dashed #999; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: white; cursor: pointer; }
-        #hand { display: flex; gap: 8px; padding: 15px; background: #e5e7eb; min-height: 100px; border-radius: 8px; }
-        .selected { ring: 4px; ring-color: #3b82f6; }
+        .text-red { color: #dc2626 !important; } 
+        .text-black { color: #000 !important; }
+        .pile { width: 60px; height: 85px; border: 2px dashed #6b7280; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white; cursor: pointer; position: relative; }
+        .pile-count { font-size: 10px; color: #6b7280; margin-top: 5px; }
+        #hand { display: flex; gap: 8px; padding: 15px; background: #e5e7eb; min-height: 100px; border-radius: 8px; overflow-x: auto; }
     </style>
 </head>
 <body class="bg-gray-100 p-4">
@@ -29,13 +30,13 @@
 
     <!-- Game -->
     <div id="game" class="hidden max-w-2xl mx-auto">
-        <div class="flex justify-between items-center mb-4">
-            <h2 id="turnText" class="font-bold text-lg">Waiting for opponent...</h2>
+        <div class="flex justify-between items-center mb-4 bg-white p-3 rounded shadow">
+            <h2 id="turnText" class="font-bold text-lg">Waiting...</h2>
             <button id="passBtn" class="bg-yellow-500 text-white px-4 py-2 rounded">Pass Turn</button>
         </div>
         <div id="board" class="grid grid-cols-3 gap-2 mb-6">
             <div id="pile-NW" class="pile" onclick="playToPile('NW')"></div><div id="pile-N" class="pile" onclick="playToPile('N')"></div><div id="pile-NE" class="pile" onclick="playToPile('NE')"></div>
-            <div id="pile-W" class="pile" onclick="playToPile('W')"></div><div class="flex items-center justify-center bg-gray-200 rounded text-xs text-gray-500">DECK</div><div id="pile-E" class="pile" onclick="playToPile('E')"></div>
+            <div id="pile-W" class="pile" onclick="playToPile('W')"></div><div class="flex items-center justify-center bg-gray-200 rounded">DECK</div><div id="pile-E" class="pile" onclick="playToPile('E')"></div>
             <div id="pile-SW" class="pile" onclick="playToPile('SW')"></div><div id="pile-S" class="pile" onclick="playToPile('S')"></div><div id="pile-SE" class="pile" onclick="playToPile('SE')"></div>
         </div>
         <div id="hand" class="shadow-inner"></div>
@@ -57,28 +58,22 @@
         peer = new Peer();
         peer.on('open', () => {
             conn = peer.connect(id);
-            conn.on('open', () => document.getElementById('status').innerText = "Connected to host!");
             conn.on('data', handleData);
+            document.getElementById('status').innerText = "Connected to host!";
         });
     };
 
     // --- Game Logic ---
     function setupMatch() {
-        // Initialize Deck
         const suits = ['♥', '♦', '♣', '♠'];
         const vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
         deck = [];
-        for(let s of suits) for(let v of vals) deck.push({s, v, val: vals.indexOf(v)+1, color: (s=='♥'||s=='♦')?'red':'black'});
+        for(let s of suits) for(let v of vals) deck.push({s, v, val: vals.indexOf(v)+1});
         deck.sort(() => Math.random() - 0.5);
 
-        // Setup Board (Place 4 center cards)
         board = {N:[],S:[],E:[],W:[],NW:[],NE:[],SW:[],SE:[]};
-        board.N.push(deck.pop());
-        board.S.push(deck.pop());
-        board.E.push(deck.pop());
-        board.W.push(deck.pop());
+        board.N.push(deck.pop()); board.S.push(deck.pop()); board.E.push(deck.pop()); board.W.push(deck.pop());
 
-        // Deal (P1 gets 8, P2 gets 7)
         let p1Hand = deck.splice(0, 8);
         let p2Hand = deck.splice(0, 7);
         
@@ -122,7 +117,9 @@
             canPlay = isCorner ? card.v === 'K' : true;
         } else {
             const top = pile[pile.length - 1];
-            canPlay = (card.val === top.val - 1) && (card.color !== top.color);
+            const topColor = (top.s === '♥' || top.s === '♦') ? 'red' : 'black';
+            const cardColor = (card.s === '♥' || card.s === '♦') ? 'red' : 'black';
+            canPlay = (card.val === top.val - 1) && (cardColor !== topColor);
         }
 
         if (canPlay) {
@@ -136,23 +133,39 @@
 
     function render() {
         document.getElementById('turnText').innerText = myTurn ? "Your Turn" : "Opponent's Turn";
+        
         const h = document.getElementById('hand'); h.innerHTML = '';
         myHand.forEach((c, i) => {
+            const colorClass = (c.s === '♥' || c.s === '♦') ? 'text-red' : 'text-black';
             const el = document.createElement('div');
-            el.className = `card ${c.color === 'red' ? 'red' : 'black'} ${selectedIdx === i ? 'ring-4 ring-blue-400' : ''}`;
+            el.className = `card ${colorClass} ${selectedIdx === i ? 'ring-4 ring-blue-400' : ''}`;
             el.innerText = c.v + c.s;
             el.onclick = () => { selectedIdx = i; render(); };
             h.appendChild(el);
         });
+
         for(let k in board) {
             const p = document.getElementById('pile-'+k);
-            p.innerText = board[k].length ? board[k][board[k].length-1].v + board[k][board[k].length-1].s : '';
+            const topCard = board[k].length ? board[k][board[k].length-1] : null;
+            
+            p.innerHTML = '';
+            if (topCard) {
+                const colorClass = (topCard.s === '♥' || topCard.s === '♦') ? 'text-red' : 'text-black';
+                const cardDiv = document.createElement('div');
+                cardDiv.className = `font-bold ${colorClass}`;
+                cardDiv.innerText = topCard.v + topCard.s;
+                p.appendChild(cardDiv);
+            }
+            const countDiv = document.createElement('div');
+            countDiv.className = 'pile-count';
+            countDiv.innerText = board[k].length + ' cards';
+            p.appendChild(countDiv);
         }
     }
 
     document.getElementById('passBtn').onclick = () => {
-        if(!myTurn || deck.length === 0) return;
-        myHand.push(deck.pop());
+        if(!myTurn) return;
+        if(deck.length > 0) myHand.push(deck.pop());
         myTurn = false;
         conn.send({type: 'move', board, deck});
         render();
