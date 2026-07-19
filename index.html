@@ -2,63 +2,141 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>King in the Corner</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <!-- Confetti Library for Celebration -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
     <style>
-        /* Hand Cards */
-        .card-in-hand { width: 50px; height: 75px; border-radius: 6px; border: 1px solid #cbd5e1; background: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; user-select: none; transition: transform 0.2s, box-shadow 0.2s; flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        /* Modern Table Background */
+        body {
+            background: radial-gradient(circle at center, #0f766e 0%, #042f2e 100%);
+            overscroll-behavior: none; /* Prevents pull-to-refresh on mobile */
+        }
+
+        /* Fluid Cards & Piles */
+        .pile { 
+            width: 100%; 
+            aspect-ratio: 5/7; 
+            border: 2px dashed rgba(255,255,255,0.3); 
+            border-radius: 8px; 
+            position: relative; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: all 0.2s; 
+            cursor: pointer;
+        }
         
-        /* Board Grid & Piles */
-        .pile { width: 64px; height: 90px; border: 2px dashed #9ca3af; border-radius: 8px; background: transparent; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-        .pile-count { position: absolute; bottom: -22px; font-size: 11px; color: #6b7280; font-weight: bold; width: 100%; text-align: center; }
+        .pile-count { 
+            position: absolute; 
+            bottom: -20px; 
+            font-size: 0.75rem; 
+            color: rgba(255,255,255,0.7); 
+            font-weight: bold; 
+            width: 100%; 
+            text-align: center; 
+        }
+
+        /* Scalable Stacked Visuals (Percentages instead of Pixels) */
+        .card-base {
+            background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+            display: flex; 
+            flex-direction: column; 
+            user-select: none;
+            overflow: hidden;
+            position: relative;
+        }
         
-        /* Stacked Card Visuals (20% offset) */
-        .card-in-pile { position: absolute; width: 48px; height: 68px; border-radius: 4px; border: 1px solid #64748b; background: white; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; font-weight: bold; padding-top: 2px; user-select: none; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
-        .stacked-bottom { top: 4px; left: 7px; z-index: 1; opacity: 0.9; background-color: #f8fafc; }
-        .stacked-top { top: 18px; left: 7px; z-index: 2; border-color: #475569; }
+        .card-in-pile { 
+            position: absolute; 
+            width: 85%; 
+            height: 85%; 
+            padding: 4%;
+        }
+        .stacked-bottom { top: 4%; left: 7%; z-index: 1; opacity: 0.85; filter: brightness(0.9); }
+        .stacked-top { top: 15%; left: 7%; z-index: 2; border-color: #94a3b8; box-shadow: 0 8px 12px -2px rgba(0,0,0,0.5); }
         
-        /* Misc */
-        #hand { display: flex; gap: 8px; padding: 15px; background: #e5e7eb; min-height: 105px; border-radius: 8px; overflow-x: auto; }
-        .text-red-600 { color: #e11d48 !important; }
-        .text-black { color: #000000 !important; }
+        /* Card Internals */
+        .card-value-container { display: flex; flex-direction: column; align-items: flex-start; line-height: 1; z-index: 10; }
+        .card-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 3rem; opacity: 0.1; z-index: 0; pointer-events: none; }
+
+        /* Hand Cards - specific sizing for tapping */
+        .card-in-hand { 
+            height: 100px; 
+            aspect-ratio: 5/7; 
+            flex-shrink: 0; 
+            cursor: pointer; 
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+            padding: 4px;
+        }
+        .card-in-hand:hover { transform: translateY(-5px); }
+
+        /* The Deck Graphic */
+        .deck-pattern {
+            background: repeating-linear-gradient( 45deg, #1e3a8a, #1e3a8a 5px, #1e40af 5px, #1e40af 10px );
+            border: 2px solid white;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5), 0 4px 6px rgba(0,0,0,0.5);
+        }
+
+        /* Glassmorphism UI */
+        .glass-panel {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        #hand { display: flex; gap: 10px; padding: 15px; overflow-x: auto; align-items: center; }
+        
+        /* Colors */
+        .text-red-card { color: #dc2626 !important; }
+        .text-black-card { color: #0f172a !important; }
     </style>
 </head>
-<body class="bg-gray-100 p-4 font-sans">
+<body class="font-sans min-h-screen flex flex-col text-slate-100">
 
     <!-- Setup Screen -->
-    <div id="setup" class="max-w-md mx-auto bg-white p-6 rounded shadow-lg mt-10">
-        <h1 class="text-2xl font-extrabold mb-4 text-center text-gray-800">King in the Corner</h1>
-        <input id="gameName" placeholder="Enter Game ID (e.g. 12345)" class="border border-gray-300 p-3 rounded w-full mb-4 text-center font-bold tracking-widest uppercase">
+    <div id="setup" class="max-w-md mx-auto w-full p-6 mt-10 glass-panel rounded-2xl shadow-2xl">
+        <h1 class="text-3xl font-extrabold mb-6 text-center text-white drop-shadow-md">King in the Corner</h1>
+        <input id="gameName" placeholder="Enter Game ID (e.g. 12345)" class="bg-white/90 text-gray-900 border-0 p-4 rounded-xl w-full mb-4 text-center font-bold tracking-widest uppercase focus:ring-4 focus:ring-emerald-500 outline-none transition">
         <div class="flex gap-3">
-            <button id="createBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-3 rounded flex-1 transition">Create Game</button>
-            <button id="joinBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-3 rounded flex-1 transition">Join Game</button>
+            <button id="createBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-4 rounded-xl flex-1 transition shadow-lg">Create Game</button>
+            <button id="joinBtn" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-4 rounded-xl flex-1 transition shadow-lg">Join Game</button>
         </div>
-        <p id="status" class="mt-4 text-sm text-center text-gray-500 font-medium"></p>
+        <p id="status" class="mt-4 text-sm text-center text-emerald-200 font-medium"></p>
     </div>
 
     <!-- Active Game Screen -->
-    <div id="game" class="hidden max-w-3xl mx-auto mt-4">
+    <div id="game" class="hidden flex-1 flex flex-col max-w-2xl mx-auto w-full p-2 sm:p-4">
         
         <!-- Header / Turn Info -->
-        <div id="headerBar" class="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow border-l-4 border-gray-300 transition-colors">
-            <h2 id="turnText" class="font-bold text-xl text-gray-700">Waiting for opponent...</h2>
-            <button id="passBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold px-6 py-2 rounded shadow transition opacity-50 cursor-not-allowed">Pass Turn</button>
+        <div id="headerBar" class="flex justify-between items-center mb-4 sm:mb-6 glass-panel p-3 sm:p-4 rounded-xl shadow-lg border-l-4 transition-colors">
+            <h2 id="turnText" class="font-bold text-sm sm:text-lg text-white">Waiting for opponent...</h2>
+            <button id="passBtn" class="bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold px-4 sm:px-6 py-2 rounded-lg shadow transition opacity-50 cursor-not-allowed text-sm sm:text-base">Pass Turn</button>
         </div>
 
-        <!-- Strict CSS Grid to prevent Deck from stretching -->
-        <div id="board" class="grid grid-cols-3 gap-x-6 gap-y-10 place-items-center mb-12 w-max mx-auto p-4">
+        <!-- Fluid Grid Board -->
+        <div id="board" class="grid grid-cols-3 gap-3 sm:gap-5 w-full max-w-[450px] mx-auto mb-8 flex-1 content-center">
             <div id="pile-NW" class="pile" onclick="clickPile('NW')"></div>
             <div id="pile-N" class="pile" onclick="clickPile('N')"></div>
             <div id="pile-NE" class="pile" onclick="clickPile('NE')"></div>
             
             <div id="pile-W" class="pile" onclick="clickPile('W')"></div>
-            <!-- Styled DECK perfectly matches card sizes -->
-            <div id="pile-DECK" class="pile border-none bg-blue-800 text-white shadow-inner flex flex-col cursor-default">
-                <span class="text-[10px] font-bold tracking-widest transform -rotate-45 opacity-70 mt-2">DECK</span>
-                <span id="deck-count" class="absolute bottom-1 text-[9px] opacity-60"></span>
+            
+            <!-- Custom Deck Graphic -->
+            <div id="pile-DECK" class="pile border-none deck-pattern cursor-default overflow-visible">
+                <div class="bg-white/20 w-[80%] h-[80%] rounded border border-white/30 flex items-center justify-center transform -rotate-12">
+                    <span class="text-[10px] sm:text-xs font-black tracking-widest text-white shadow-sm drop-shadow-md">DECK</span>
+                </div>
+                <span id="deck-count" class="absolute -bottom-6 text-[10px] sm:text-xs font-bold text-white/80 w-[150%] text-center left-[-25%]"></span>
             </div>
+            
             <div id="pile-E" class="pile" onclick="clickPile('E')"></div>
             
             <div id="pile-SW" class="pile" onclick="clickPile('SW')"></div>
@@ -67,14 +145,23 @@
         </div>
 
         <!-- Player Hand -->
-        <div id="hand" class="shadow-inner border border-gray-300"></div>
+        <div id="hand" class="glass-panel rounded-t-2xl shadow-2xl pb-6"></div>
+    </div>
+
+    <!-- Celebration Modal -->
+    <div id="winModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="bg-white rounded-3xl p-10 text-center max-w-sm w-full mx-4 shadow-2xl transform scale-100 transition-transform">
+            <h2 id="winTitle" class="text-4xl font-black text-gray-800 mb-2"></h2>
+            <p class="text-gray-500 mb-8 font-medium">The game has ended!</p>
+            <button onclick="location.reload()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transition transform hover:scale-105 w-full">Play Again (Reload)</button>
+        </div>
     </div>
 
 <script>
     let peer, conn, myHand = [], board = {}, deck = [];
     let myTurn = false;
-    let selectedHandIdx = null; // Tapping a card in hand
-    let selectedPileId = null;  // Tapping a pile to move it
+    let selectedHandIdx = null; 
+    let selectedPileId = null;  
 
     // --- Networking ---
     document.getElementById('createBtn').onclick = () => {
@@ -98,7 +185,6 @@
         });
     };
 
-    // --- Game Setup ---
     function startHostGame() {
         const suits = ['♥', '♦', '♣', '♠'];
         const vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
@@ -109,8 +195,8 @@
         board = {N:[],S:[],E:[],W:[],NW:[],NE:[],SW:[],SE:[]};
         board.N.push(deck.pop()); board.S.push(deck.pop()); board.E.push(deck.pop()); board.W.push(deck.pop());
 
-        myHand = deck.splice(0, 8); // P1 gets 8
-        let p2Hand = deck.splice(0, 7); // P2 gets 7
+        myHand = deck.splice(0, 8); 
+        let p2Hand = deck.splice(0, 7); 
         myTurn = true;
         
         conn.send({type: 'init', p2Hand, board, deck, turn: false});
@@ -121,8 +207,10 @@
     function initGame() {
         document.getElementById('setup').classList.add('hidden');
         document.getElementById('game').classList.remove('hidden');
+        document.getElementById('game').classList.add('flex'); // Keep flex active
         Sortable.create(document.getElementById('hand'), {
             animation: 150,
+            ghostClass: 'opacity-50',
             onEnd: (evt) => {
                 const item = myHand.splice(evt.oldIndex, 1)[0];
                 myHand.splice(evt.newIndex, 0, item);
@@ -136,16 +224,16 @@
             myHand = d.p2Hand; board = d.board; deck = d.deck; myTurn = d.turn; 
             initGame(); 
         } 
-        else if(d.type === 'move') { 
-            board = d.board; deck = d.deck; 
-        } 
+        else if(d.type === 'move') { board = d.board; deck = d.deck; } 
         else if(d.type === 'pass') { 
             myTurn = true; 
-            // Auto-draw a card when it becomes your turn
             if(deck.length > 0) {
                 myHand.push(deck.pop());
                 conn.send({type: 'move', board, deck});
             }
+        }
+        else if(d.type === 'win') {
+            triggerWinScreen(false);
         }
         render();
     }
@@ -153,32 +241,20 @@
     // --- Interaction Logic ---
     function selectHandCard(idx) {
         if (!myTurn) return;
-        selectedHandIdx = (selectedHandIdx === idx) ? null : idx; // Toggle
-        selectedPileId = null; // Clear pile selection if switching to hand
+        selectedHandIdx = (selectedHandIdx === idx) ? null : idx;
+        selectedPileId = null; 
         render();
     }
 
     function clickPile(pileId) {
         if (!myTurn) return;
-
-        // Case 1: Playing a card from Hand to Pile
-        if (selectedHandIdx !== null) {
-            playCardToPile(pileId);
-            return;
-        }
-
-        // Case 2: Moving a Pile to another Pile
+        if (selectedHandIdx !== null) { playCardToPile(pileId); return; }
         if (selectedPileId !== null) {
-            if (selectedPileId === pileId) {
-                selectedPileId = null; // Deselect if clicking same pile
-            } else {
-                movePileToPile(selectedPileId, pileId);
-            }
+            if (selectedPileId === pileId) selectedPileId = null;
+            else movePileToPile(selectedPileId, pileId);
             render();
             return;
         }
-
-        // Case 3: Selecting a Pile to move it (must have cards)
         if (board[pileId].length > 0) {
             selectedPileId = pileId;
             render();
@@ -192,21 +268,22 @@
         
         let canPlay = false;
         if (targetPile.length === 0) {
-            canPlay = isCorner ? card.v === 'K' : true; // Kings in corner, anything in center 4
+            canPlay = isCorner ? card.v === 'K' : true; 
         } else {
             const top = targetPile[targetPile.length - 1];
             const topColor = (top.s === '♥' || top.s === '♦') ? 'red' : 'black';
             const cardColor = (card.s === '♥' || card.s === '♦') ? 'red' : 'black';
-            canPlay = (card.val === top.val - 1) && (cardColor !== topColor); // Alt color, 1 lower
+            canPlay = (card.val === top.val - 1) && (cardColor !== topColor);
         }
 
         if (canPlay) {
             board[targetPileId].push(myHand.splice(selectedHandIdx, 1)[0]);
-            selectedHandIdx = null; // Deselect hand card
-            conn.send({type: 'move', board, deck}); // SEND MOVE, BUT KEEP TURN
+            selectedHandIdx = null; 
+            conn.send({type: 'move', board, deck});
+            checkWinCondition();
             render();
         } else {
-            selectedHandIdx = null; // Invalid move, just deselect
+            selectedHandIdx = null; 
             render();
         }
     }
@@ -228,8 +305,8 @@
         }
 
         if (canPlay) {
-            board[targetId] = targetPile.concat(sourcePile); // Merge piles
-            board[sourceId] = []; // Empty source
+            board[targetId] = targetPile.concat(sourcePile); 
+            board[sourceId] = []; 
             selectedPileId = null;
             conn.send({type: 'move', board, deck});
             render();
@@ -239,88 +316,114 @@
         }
     }
 
-    // --- Passing Turn ---
+    // --- Win Logic & Effects ---
+    function checkWinCondition() {
+        if (myHand.length === 0) {
+            conn.send({type: 'win'});
+            triggerWinScreen(true);
+        }
+    }
+
+    function triggerWinScreen(isWinner) {
+        const modal = document.getElementById('winModal');
+        const title = document.getElementById('winTitle');
+        modal.classList.remove('hidden');
+        
+        if (isWinner) {
+            title.innerText = "You Won! 🎉";
+            title.className = "text-4xl font-black text-emerald-600 mb-2";
+            // Confetti Explosion
+            let duration = 3 * 1000;
+            let end = Date.now() + duration;
+            (function frame() {
+                confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#10b981', '#3b82f6', '#f59e0b'] });
+                confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#10b981', '#3b82f6', '#f59e0b'] });
+                if (Date.now() < end) requestAnimationFrame(frame);
+            }());
+        } else {
+            title.innerText = "Opponent Won 😢";
+            title.className = "text-4xl font-black text-rose-600 mb-2";
+        }
+    }
+
     document.getElementById('passBtn').onclick = () => {
         if(!myTurn) return;
-        myTurn = false; // Turn ONLY ends here
+        myTurn = false;
         selectedHandIdx = null;
         selectedPileId = null;
         conn.send({type: 'pass'});
         render();
     };
 
-    // --- Rendering ---
+    // --- Rendering Helpers ---
+    function createCardHTML(c, extraClasses = "") {
+        const color = (c.s === '♥' || c.s === '♦') ? 'text-red-card' : 'text-black-card';
+        return `
+            <div class="card-base ${extraClasses} ${color}">
+                <div class="card-value-container">
+                    <span class="text-sm sm:text-base font-bold">${c.v}</span>
+                    <span class="text-sm sm:text-base">${c.s}</span>
+                </div>
+                <div class="card-watermark">${c.s}</div>
+            </div>`;
+    }
+
     function render() {
-        // Turn Header Visulals
         const turnEl = document.getElementById('turnText');
         const headerBar = document.getElementById('headerBar');
         const passBtn = document.getElementById('passBtn');
         
         if (myTurn) {
-            turnEl.innerText = "Your Turn (Make moves, then Pass)";
-            turnEl.className = "font-extrabold text-xl text-green-700";
-            headerBar.className = "flex justify-between items-center mb-6 bg-green-50 p-4 rounded-xl shadow border-l-4 border-green-500 transition-colors";
-            passBtn.className = "bg-yellow-500 hover:bg-yellow-600 text-white font-bold px-6 py-2 rounded shadow transition";
+            turnEl.innerText = "Your Turn (Play, then Pass)";
+            headerBar.className = "flex justify-between items-center mb-4 sm:mb-6 glass-panel p-3 sm:p-4 rounded-xl shadow-lg border-l-4 border-emerald-400 transition-colors";
+            passBtn.className = "bg-amber-400 hover:bg-amber-300 text-amber-950 font-black px-4 sm:px-6 py-2 rounded-lg shadow-lg transition transform hover:scale-105 text-sm sm:text-base";
         } else {
             turnEl.innerText = "Opponent's Turn...";
-            turnEl.className = "font-bold text-xl text-gray-500";
-            headerBar.className = "flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow border-l-4 border-gray-300 transition-colors";
-            passBtn.className = "bg-gray-400 text-white font-bold px-6 py-2 rounded shadow opacity-50 cursor-not-allowed";
+            headerBar.className = "flex justify-between items-center mb-4 sm:mb-6 glass-panel p-3 sm:p-4 rounded-xl shadow-lg border-l-4 border-white/20 transition-colors opacity-70";
+            passBtn.className = "bg-white/10 text-white/50 font-bold px-4 sm:px-6 py-2 rounded-lg cursor-not-allowed text-sm sm:text-base";
         }
         
-        // Hand
-        const h = document.getElementById('hand'); h.innerHTML = '';
+        // Hand rendering
+        const h = document.getElementById('hand'); 
+        h.innerHTML = '';
         myHand.forEach((c, i) => {
-            const color = (c.s === '♥' || c.s === '♦') ? 'text-red-600' : 'text-black';
             const isSelected = selectedHandIdx === i;
-            const el = document.createElement('div');
-            el.className = `card-in-hand ${color} ${isSelected ? 'ring-4 ring-blue-500 transform -translate-y-2' : ''}`;
-            el.innerHTML = `<span class="text-sm">${c.v}</span><span class="text-2xl">${c.s}</span>`;
+            const selectClass = isSelected ? 'ring-4 ring-emerald-400 transform -translate-y-4 shadow-2xl' : 'card-in-hand';
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = createCardHTML(c, selectClass + ' w-full h-full');
+            const el = tempDiv.firstElementChild;
+            if(!isSelected) el.classList.add('card-in-hand'); // Re-apply for base hover effect
             el.onclick = () => selectHandCard(i);
             h.appendChild(el);
         });
 
-        // Board Piles
+        // Board rendering
         for (let k in board) {
             const p = document.getElementById('pile-' + k);
             p.innerHTML = '';
             
-            // Highlight selected pile
             if (selectedPileId === k) {
-                p.classList.add('ring-4', 'ring-purple-500', 'bg-purple-50');
+                p.classList.add('ring-4', 'ring-purple-400', 'bg-purple-900/30');
             } else {
-                p.classList.remove('ring-4', 'ring-purple-500', 'bg-purple-50');
+                p.classList.remove('ring-4', 'ring-purple-400', 'bg-purple-900/30');
             }
 
             if (board[k].length > 0) {
-                // Bottom Card peek (if more than 1)
                 if (board[k].length > 1) {
                     const b = board[k][0];
-                    const bc = (b.s === '♥' || b.s === '♦') ? 'text-red-600' : 'text-black';
-                    const bEl = document.createElement('div');
-                    bEl.className = `card-in-pile stacked-bottom ${bc}`;
-                    bEl.innerHTML = `<span class="text-[13px]">${b.v}</span><span class="text-[12px]">${b.s}</span>`;
-                    p.appendChild(bEl);
+                    p.innerHTML += createCardHTML(b, 'card-in-pile stacked-bottom');
                 }
-                
-                // Top Card (offset down by exactly 14px)
                 const t = board[k][board[k].length - 1];
-                const tc = (t.s === '♥' || t.s === '♦') ? 'text-red-600' : 'text-black';
-                const tEl = document.createElement('div');
-                tEl.className = `card-in-pile stacked-top ${tc}`;
-                tEl.innerHTML = `<span class="text-[13px]">${t.v}</span><span class="text-[12px]">${t.s}</span>`;
-                p.appendChild(tEl);
+                p.innerHTML += createCardHTML(t, 'card-in-pile stacked-top');
             }
             
-            // Text underneath to show actual count
             const count = document.createElement('div');
             count.className = 'pile-count';
-            count.innerText = board[k].length > 0 ? board[k].length : '';
+            count.innerText = board[k].length > 0 ? board[k].length + ' Cards' : '';
             p.appendChild(count);
         }
 
-        // Deck Count Update
-        document.getElementById('deck-count').innerText = deck.length + " left";
+        document.getElementById('deck-count').innerText = deck.length + " Cards Left";
     }
 </script>
 </body>
